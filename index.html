@@ -51,6 +51,29 @@
           transform: scale(1);
         }
       }
+      /* Blur effect for modal background */
+      #modal-container {
+        transition: backdrop-filter 0.3s ease;
+      }
+      #modal-container.active {
+        backdrop-filter: blur(8px);
+      }
+
+      /* Pulse animation for the play button */
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        }
+      }
+      .pulse-animation {
+        animation: pulse 2s infinite;
+      }
       .timer-display-modal {
         /* Specific class for timer in modal */
         font-size: 3.5rem; /* Large timer size for modal */
@@ -218,7 +241,7 @@
 
     <div
       id="modal-container"
-      class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden"
+      class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden"
     >
       <div
         id="generic-modal"
@@ -325,6 +348,15 @@
       const BID_TIME_SECONDS = 15;
       const NUM_MYSTERY_BOXES = 15;
       const MIN_BID_AMOUNT = 100;
+
+      // Helper function to count unique power-up types
+      function uniquePowerUpCount() {
+        const uniqueEffects = new Set();
+        powerUpsData.forEach(powerUp => {
+          uniqueEffects.add(powerUp.effect);
+        });
+        return uniqueEffects.size;
+      }
 
       // --- Pre-defined Game Content ---
       const questionsData = [];
@@ -584,12 +616,155 @@
         }
       }
       numTeamsSelect.addEventListener("change", updateTeamNameInputs);
+      function showGameInstructionsModal() {
+        // Create content for the instructions modal
+        let instructionsHTML = `
+          <div class="space-y-8">
+            <div class="text-center mb-2">
+              <div class="inline-block p-3 bg-sky-500 bg-opacity-20 rounded-full mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p class="text-slate-300 text-lg">Welcome to</p>
+              <h2 class="text-3xl font-bold text-sky-400 font-accent">Mystery Box Challenge</h2>
+            </div>
+
+            <div class="bg-slate-700 bg-opacity-50 p-5 rounded-lg">
+              <h3 class="text-2xl font-bold text-sky-400 mb-3 font-accent flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                How to Play
+              </h3>
+              <ul class="list-disc pl-6 space-y-2 text-slate-300">
+                <li>Teams take turns selecting a Mystery Box.</li>
+                <li>Teams bid currency to win the right to open a box.</li>
+                <li>Boxes contain questions (${questionsData.length}) or power-ups (${powerUpsData.length}).</li>
+                <li>Answer questions correctly to earn points.</li>
+                <li>Use power-ups strategically to gain an advantage.</li>
+                <li>Each team starts with $${INITIAL_CURRENCY} currency.</li>
+                <li>Minimum bid is $${MIN_BID_AMOUNT} per box.</li>
+                <li>The team with the most points at the end wins!</li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-700 bg-opacity-50 p-5 rounded-lg">
+              <h3 class="text-2xl font-bold text-sky-400 mb-3 font-accent flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Power-ups (${uniquePowerUpCount()} types)
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        `;
+
+        // Create a set to track unique power-up types
+        const uniquePowerUps = new Map();
+        powerUpsData.forEach(powerUp => {
+          // Use the effect as the key to avoid duplicates
+          if (!uniquePowerUps.has(powerUp.effect)) {
+            uniquePowerUps.set(powerUp.effect, powerUp);
+          }
+        });
+
+        // Add each unique power-up to the instructions
+        uniquePowerUps.forEach(powerUp => {
+          let pointsText = "";
+          if (powerUp.points) {
+            pointsText = powerUp.points > 0 ?
+              `<span class="text-green-400">+${powerUp.points} points</span>` :
+              `<span class="text-red-400">${powerUp.points} points</span>`;
+          }
+
+          // Choose an icon based on the power-up effect
+          let iconPath = "";
+          switch(powerUp.effect) {
+            case "swap_points":
+              iconPath = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />`;
+              break;
+            case "steal_points":
+              iconPath = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />`;
+              break;
+            case "bomb":
+              iconPath = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />`;
+              break;
+            case "shield":
+              iconPath = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />`;
+              break;
+            case "bonus_points":
+              iconPath = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+              break;
+            default:
+              iconPath = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />`;
+          }
+
+          // Determine background color based on effect
+          let bgColorClass = "bg-slate-700";
+          if (powerUp.effect === "bonus_points") bgColorClass = "bg-green-800 bg-opacity-50";
+          if (powerUp.effect === "bomb") bgColorClass = "bg-red-800 bg-opacity-50";
+          if (powerUp.effect === "shield") bgColorClass = "bg-blue-800 bg-opacity-50";
+          if (powerUp.effect === "steal_points") bgColorClass = "bg-purple-800 bg-opacity-50";
+          if (powerUp.effect === "swap_points") bgColorClass = "bg-yellow-800 bg-opacity-50";
+
+          instructionsHTML += `
+            <div class="${bgColorClass} p-4 rounded-lg shadow-lg border border-slate-600">
+              <div class="flex items-start">
+                <div class="bg-slate-800 p-2 rounded-full mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    ${iconPath}
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="text-xl font-bold text-yellow-300 mb-1 font-game-elements">${powerUp.name}</h4>
+                  <p class="text-slate-300">${powerUp.description}</p>
+                  ${pointsText ? `<p class="mt-2 font-semibold">${pointsText}</p>` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        instructionsHTML += `
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Create a button to start the game
+        const startButtonHTML = `
+          <button id="continue-game-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg transform transition-transform hover:scale-105 pulse-animation modal-action-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Let's Play!
+          </button>
+        `;
+
+        // Show the modal with instructions
+        showModal(
+          "Mystery Box Game Instructions",
+          instructionsHTML,
+          startButtonHTML,
+          false // Not backdrop dismissible
+        );
+
+        // Add event listener to the continue button
+        document.getElementById("continue-game-btn").addEventListener("click", () => {
+          closeModal();
+          continueGameInitialization();
+        });
+      }
+
       async function initializeGame() {
         if (Tone.context.state !== "running") {
           await Tone.start();
         }
         // Play the start music once when game starts
         playStartMusic();
+
+        // Prepare teams data
         teams = [];
         const num = parseInt(numTeamsSelect.value);
         for (let i = 1; i <= num; i++) {
@@ -602,6 +777,13 @@
             hasShield: false,
           });
         }
+
+        // Show the instructions modal while the music plays
+        showGameInstructionsModal();
+      }
+
+      function continueGameInitialization() {
+        // Prepare game content
         let availableContent = [...questionsData, ...powerUpsData];
         availableContent.sort(() => Math.random() - 0.5);
         mysteryBoxes = [];
@@ -618,6 +800,8 @@
           });
         }
         boxesOpenedCount = 0;
+
+        // Switch to game screen
         setupScreen.classList.add("hidden");
         gameScreen.classList.remove("hidden");
         document.body.classList.remove(
@@ -627,6 +811,8 @@
           "overflow-hidden"
         );
         document.body.classList.add("flex", "flex-col", "min-h-screen");
+
+        // Render game elements
         renderMysteryBoxes();
         renderScoreboard();
         updateWinningBidderSelectOptions(); // Call without arg to prep for modal
@@ -1141,12 +1327,14 @@
           }
         }
         modalContainer.style.display = "flex";
+        modalContainer.classList.add("active");
       }
 
       document.getElementById("modal-close-btn").onclick = closeModal;
 
       function closeModal() {
         modalContainer.style.display = "none";
+        modalContainer.classList.remove("active");
         const defaultCloseButton = document.getElementById("modal-close-btn");
         if (defaultCloseButton) defaultCloseButton.classList.remove("hidden");
         // Universal call to checkGameEndOrResetPanel after ANY modal closes via explicit button or backdrop (if allowed)
