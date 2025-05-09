@@ -42,8 +42,8 @@
         font-size: 3.5rem; /* Large timer size for modal */
         font-weight: bold;
         color: #ef4444; /* Tailwind red-500 */
-        margin-top: 0.5rem; /* Increased space below SVG */
-        margin-bottom: 1rem;
+        margin-top: 1.5rem; /* Increased space below SVG */
+        margin-bottom: 1.5rem;
       }
       .teacher-panel button,
       .teacher-panel select,
@@ -52,6 +52,7 @@
         margin: 0.25rem;
       }
       .box-grid-container {
+        margin: 50px 0 50px 0;
         max-width: 1200px;
         margin-left: auto;
         margin-right: auto;
@@ -78,15 +79,16 @@
         color: #fbbf24;
       }
       .qa-modal-text {
-        font-size: 1.5rem;
+        font-size: 2rem;
         line-height: 1.6;
       }
       .qa-modal-text strong {
-        font-weight: 600;
+        font-weight: 700;
       }
       .modal-action-button {
-        padding: 0.6rem 1.2rem;
-        font-size: 0.9rem;
+        padding: 0.8rem 1.5rem;
+        font-size: 1.1rem;
+        font-weight: bold;
       }
 
       /* Bidding Modal Specific Styles */
@@ -163,14 +165,16 @@
 
     <div
       id="game-screen"
-      class="hidden w-full h-full flex flex-col p-4 bg-slate-900"
+      class="hidden w-full h-screen flex flex-col p-4 bg-slate-900"
     >
-      <div
-        id="box-grid-container"
-        class="box-grid-container flex-grow grid grid-cols-5 gap-4 p-4"
-      ></div>
+      <div class="flex-grow flex items-center justify-center">
+        <div
+          id="box-grid-container"
+          class="box-grid-container grid grid-cols-5 gap-4 p-4"
+        ></div>
+      </div>
 
-      <div class="bg-slate-800 p-4 rounded-t-lg shadow-inner mt-auto">
+      <div class="bg-slate-800 p-4 rounded-t-lg shadow-inner w-full mt-auto">
         <div
           id="teacher-panel"
           class="mb-4 p-4 bg-slate-700 rounded-lg text-center min-h-[80px] teacher-panel"
@@ -198,17 +202,17 @@
     >
       <div
         id="generic-modal"
-        class="modal bg-slate-800 p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col"
+        class="modal bg-slate-800 p-6 sm:p-10 rounded-lg shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col"
       >
         <h2
           id="modal-title"
-          class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-sky-400 text-center"
+          class="text-3xl sm:text-4xl font-bold mb-4 sm:mb-6 text-sky-400 text-center"
         >
           Modal Title
         </h2>
         <div
           id="modal-content"
-          class="text-base sm:text-lg text-slate-300 mb-4 sm:mb-6 overflow-y-auto flex-grow"
+          class="text-lg sm:text-xl text-slate-300 mb-4 sm:mb-6 overflow-y-auto flex-grow"
         >
           <p>Modal content goes here.</p>
         </div>
@@ -264,15 +268,16 @@
       let currentWinningBidderTeamId = null;
       let bidInterval = null;
       let gameSoundsMuted = false;
-      let backgroundMusicPlayer = null;
+      let backgroundMusicPlayer = new Audio("public/assets/music/start_music.m4a");
+      backgroundMusicPlayer.loop = false;
       let sfxPlayers = {};
-      let isDoublePointsActive = false;
+
       let boxesOpenedCount = 0;
       let currentModalIsBackdropDismissible = true;
 
       const INITIAL_CURRENCY = 1500;
-      const BID_TIME_SECONDS = 10;
-      const NUM_MYSTERY_BOXES = 15;
+      const BID_TIME_SECONDS = 15;
+      const NUM_MYSTERY_BOXES = 10;
       const MIN_BID_AMOUNT = 100;
 
       // --- Pre-defined Game Content ---
@@ -317,27 +322,6 @@
         },
         {
           id: "q6",
-          text: "In paragraph 6, how much money was raised for shelters in 2022?",
-          answer: "Over $50,000.",
-          points: 200,
-          type: "Q&A",
-        },
-        {
-          id: "q7",
-          text: "True or False: Gen Z still prefers using cash on campus.",
-          answer: "False.",
-          points: 50,
-          type: "Q&A",
-        },
-        {
-          id: "q8",
-          text: "True or False: Gen Z only shops at big malls.",
-          answer: "False.",
-          points: 50,
-          type: "Q&A",
-        },
-        {
-          id: "q9",
           text: "True or False: Gen Z likes brands that support causes they care about.",
           answer: "True.",
           points: 50,
@@ -370,10 +354,10 @@
         },
         {
           id: "p4",
-          name: "Double Points",
-          description:
-            "The next Q&A box is worth double points for the team that answers it correctly!",
-          effect: "double_points",
+          name: "Bonus Points",
+          description: "Your team instantly gains 100 points!",
+          effect: "bonus_points",
+          points: 100,
           type: "Power-up",
         },
         {
@@ -383,36 +367,12 @@
             "Your team is immune to the next 'Steal' or 'Bomb' power-up directed at you. (One-time use)",
           effect: "shield",
           type: "Power-up",
-        },
-        {
-          id: "p6",
-          name: "Bonus Points",
-          description: "Your team instantly gains 100 points!",
-          effect: "bonus_points",
-          points: 100,
-          type: "Power-up",
         }
       );
 
       // --- Sound Engine (Tone.js) ---
       function setupSounds() {
-        backgroundMusicPlayer = new Tone.Loop((time) => {
-          const synth = new Tone.Synth({
-            oscillator: { type: "fatsawtooth" },
-            envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.5 },
-            volume: -25,
-          }).toDestination();
-          synth.triggerAttackRelease(
-            ["C3", "E3", "G3", "B3"][Math.floor(Math.random() * 4)],
-            "8n",
-            time
-          );
-          synth.triggerAttackRelease(
-            ["D3", "F#3", "A3", "C4"][Math.floor(Math.random() * 4)],
-            "8n",
-            time + Tone.Time("8n").toSeconds()
-          );
-        }, "1m").start(0);
+        // Background music is now handled with the standard Audio API
         sfxPlayers.correct = () =>
           new Tone.Synth({
             oscillator: { type: "triangle" },
@@ -492,11 +452,12 @@
         }
       }
       function toggleBackgroundMusic(play) {
-        if (Tone.context.state !== "running") return;
-        if (play && backgroundMusicToggle.checked) {
-          Tone.Transport.start();
+        if (play && backgroundMusicToggle.checked && !gameSoundsMuted) {
+          backgroundMusicPlayer.play().catch(e => {
+            console.log("Error playing background music:", e);
+          });
         } else {
-          Tone.Transport.pause();
+          backgroundMusicPlayer.pause();
         }
       }
       gameSoundToggleBtn.addEventListener("click", () => {
@@ -505,6 +466,13 @@
           ? "Unmute Sounds"
           : "Mute Sounds";
         Tone.Destination.mute = gameSoundsMuted;
+
+        // Handle background music muting
+        if (gameSoundsMuted) {
+          backgroundMusicPlayer.pause();
+        } else if (backgroundMusicToggle.checked) {
+          toggleBackgroundMusic(true);
+        }
       });
       function toggleFullScreen() {
         if (!document.fullscreenElement) {
@@ -542,7 +510,8 @@
         if (Tone.context.state !== "running") {
           await Tone.start();
         }
-        // setupSounds() is now called at the end of the script
+        // Reset the background music to the beginning
+        backgroundMusicPlayer.currentTime = 0;
         teams = [];
         const num = parseInt(numTeamsSelect.value);
         for (let i = 1; i <= num; i++) {
@@ -571,7 +540,6 @@
           });
         }
         boxesOpenedCount = 0;
-        isDoublePointsActive = false;
         setupScreen.classList.add("hidden");
         gameScreen.classList.remove("hidden");
         document.body.classList.remove(
@@ -675,14 +643,14 @@
         if (!box) return;
         let modalTimerDisplay;
         const contentHTML = `
-                <p class="text-sm text-slate-400 mb-3 text-center">Bidding starts at $${MIN_BID_AMOUNT}. Teacher manages verbal bids.</p>
+                <p class="text-sm text-slate-400 mb-3 text-center" style="font-size: 1.5rem;">Bidding starts at $${MIN_BID_AMOUNT}. Teacher manages verbal bids.</p>
                 <div class="text-center mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 text-red-500 mx-auto mb-3">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
-                    <div id="modal-timer-display" class="timer-display-modal">10</div>
-                    <button id="modal-start-bid-timer-btn" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold py-2 px-4 rounded-md modal-action-button">Start 10s Bid Timer</button>
+                    <div id="modal-timer-display" class="timer-display-modal">15</div>
+                    <button id="modal-start-bid-timer-btn" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold py-2 px-4 rounded-md modal-action-button">Start 15s Bid Timer</button>
                 </div>
                 <div class="mb-3">
                     <label for="modal-winning-bidder-select" class="bidding-modal-label">Winning Team:</label>
@@ -725,6 +693,9 @@
             "opacity-50",
             "cursor-not-allowed"
           );
+          // Pause background music during timer countdown
+          toggleBackgroundMusic(false);
+
           let timeLeft = BID_TIME_SECONDS;
           modalTimerDisplay.textContent = timeLeft;
           modalTimerDisplay.classList.remove("text-sm");
@@ -742,12 +713,17 @@
               clearInterval(bidInterval);
               playSound("timerEnd");
               modalTimerDisplay.textContent = "Time's Up!";
-              modalTimerDisplay.classList.add("text-sm");
+              // Resume background music after timer ends
+              toggleBackgroundMusic(true);
+              // Remove this line that was adding text-sm class
+              // modalTimerDisplay.classList.add("text-sm");
             }
           }, 1000);
         };
         modalCancelBidBtn.onclick = () => {
           clearInterval(bidInterval);
+          // Resume background music when canceling
+          toggleBackgroundMusic(true);
           closeModal();
           resetTeacherPanel();
         };
@@ -781,6 +757,8 @@
           playSound("bidPlaced");
           renderScoreboard();
           clearInterval(bidInterval);
+          // Resume background music when awarding box
+          toggleBackgroundMusic(true);
           closeModal();
           revealBoxContent();
         };
@@ -798,7 +776,7 @@
           const revealAnswerInModalBtnHTML = `<button id="modal-reveal-answer-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-md modal-action-button">Reveal Answer</button>`;
           showModal(
             `Question - Box ${currentSelectedBoxId}`,
-            `<p class="text-2xl">${content.text}</p>`,
+            `<p class="text-3xl font-semibold">${content.text}</p>`,
             revealAnswerInModalBtnHTML,
             false
           );
@@ -837,7 +815,7 @@
                 <button id="modal-incorrect-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold rounded-md modal-action-button">Incorrect</button>`;
         showModal(
           `Question & Answer - Box ${currentSelectedBoxId}`,
-          `<div class='space-y-4'><p class='text-xl'><strong class='text-sky-400'>Q:</strong> ${content.text}</p><hr class='border-slate-600 my-3'><p class='text-xl'><strong class='text-green-400'>A:</strong> ${content.answer}</p></div>`,
+          `<div class='space-y-6'><p class='text-2xl'><strong class='text-sky-400 text-3xl'>Q:</strong> ${content.text}</p><hr class='border-slate-600 my-4'><p class='text-2xl'><strong class='text-green-400 text-3xl'>A:</strong> ${content.answer}</p></div>`,
           qaActionsHTML,
           false
         );
@@ -857,21 +835,12 @@
         if (isCorrect) {
           playSound("correct");
           let pointsAwarded = box.content.points;
-          let message = `Congratulations ${team.name}! You've won <strong class='text-yellow-300 text-2xl'>${pointsAwarded}</strong> Mystery Points!`;
-          if (isDoublePointsActive) {
-            pointsAwarded *= 2;
-            isDoublePointsActive = false;
-            message = `${team.name} gets <strong class='text-yellow-300 text-2xl'>${pointsAwarded}</strong> points! (This was a double points question). ${message}`;
-          }
+          let message = `Congratulations ${team.name}! You've won <strong class='text-yellow-300 text-4xl'>${pointsAwarded}</strong> Mystery Points!`;
           updateScore(team.id, pointsAwarded, true, null);
           showModal("Correct Answer!", message, okayButtonHTML, false);
         } else {
           playSound("incorrect");
-          let message = `Sorry ${team.name}, that was not the correct answer. No points awarded.`;
-          if (isDoublePointsActive) {
-            isDoublePointsActive = false;
-            message = `The double points opportunity was missed. ${message}`;
-          }
+          let message = `<span class="text-2xl">Sorry ${team.name}, that was not the correct answer.</span><br><span class="text-xl mt-2 block">No points awarded.</span>`;
           showModal("Incorrect Answer", message, okayButtonHTML, false);
         }
       }
@@ -977,11 +946,7 @@
               false
             );
             break;
-          case "double_points":
-            isDoublePointsActive = true;
-            // The initial modal from revealBoxContent showed the description and has its own "Okay" button.
-            // That "Okay" button will call checkGameEndOrResetPanel.
-            break;
+
           case "shield":
             winningTeam.hasShield = true;
             renderScoreboard();
@@ -1107,7 +1072,9 @@
         }
       }
       function endGame() {
-        toggleBackgroundMusic(false);
+        // Stop background music
+        backgroundMusicPlayer.pause();
+        backgroundMusicPlayer.currentTime = 0;
         playSound("powerUp");
         teams.sort((a, b) => b.score - a.score);
         let leaderboardHTML = '<ol class="list-decimal list-inside space-y-3">';
