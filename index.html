@@ -1304,8 +1304,8 @@
         if (targetTeams.length === 0) {
           contentHTML = `<p class="mb-4 text-yellow-400">No other teams available for this action.</p>`;
         } else {
-          targetTeams.forEach((team) => {
-            contentHTML += `<button class="target-team-btn w-full bg-sky-500 hover:bg-sky-600 p-3 rounded-md modal-action-button" data-team-id="${team.id}">${team.name} (Score: ${team.score})</button>`;
+            targetTeams.forEach((team) => {
+            contentHTML += `<button class="target-team-btn w-full bg-sky-500 hover:bg-sky-600 text-black p-3 rounded-md modal-action-button" data-team-id="${team.id}">${team.name} (Score: ${team.score})</button>`;
           });
         }
         contentHTML += `</div>`;
