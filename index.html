@@ -4,11 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mystery Box Jeopardy</title>
+    <!-- Favicon -->
+    <link rel="icon" href="public/assets/favicon/favicon.svg" type="image/svg+xml">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&family=Source+Sans+Pro:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
+      /* Font Variables */
+      :root {
+        --font-primary: 'Inter', 'Montserrat', 'Poppins', sans-serif;
+        --font-game-elements: 'Rubik', 'DM Sans', sans-serif;
+        --font-question: 'Source Sans Pro', 'Open Sans', sans-serif;
+        --font-accent: 'Outfit', 'Space Grotesk', sans-serif;
+      }
+
       body {
-        font-family: "Inter", sans-serif;
+        font-family: var(--font-primary);
         overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
       }
       .mystery-box {
@@ -61,6 +75,7 @@
         min-height: 180px;  /* Increased from 150px */
         min-width: 200px;   /* Added minimum width */
         font-size: 2rem;    /* Increased from 1.5rem */
+        font-family: var(--font-game-elements);
       }
       .modal-content::-webkit-scrollbar {
         width: 8px;
@@ -82,6 +97,7 @@
       .qa-modal-text {
         font-size: 2rem;
         line-height: 1.6;
+        font-family: var(--font-question);
       }
       .qa-modal-text strong {
         font-weight: 700;
@@ -90,6 +106,20 @@
         padding: 0.8rem 1.5rem;
         font-size: 1.1rem;
         font-weight: bold;
+      }
+
+      /* Font Classes */
+      .font-primary {
+        font-family: var(--font-primary);
+      }
+      .font-game-elements {
+        font-family: var(--font-game-elements);
+      }
+      .font-question {
+        font-family: var(--font-question);
+      }
+      .font-accent {
+        font-family: var(--font-accent);
       }
 
       /* Bidding Modal Specific Styles */
@@ -118,7 +148,7 @@
       id="setup-screen"
       class="w-full max-w-lg p-8 bg-slate-800 rounded-lg shadow-2xl text-center"
     >
-      <h1 class="text-4xl font-bold mb-8 text-sky-400">
+      <h1 class="text-4xl font-bold mb-8 text-sky-400 font-accent">
         Mystery Box Jeopardy Setup
       </h1>
       <div class="mb-6">
@@ -150,6 +180,7 @@
       >
         Enter Fullscreen
       </button>
+      <p class="mt-6 text-slate-400 text-sm">Made with love, for love ❤️</p>
     </div>
 
     <div
@@ -195,13 +226,13 @@
       >
         <h2
           id="modal-title"
-          class="text-3xl sm:text-4xl font-bold mb-4 sm:mb-6 text-sky-400 text-center"
+          class="text-3xl sm:text-4xl font-bold mb-4 sm:mb-6 text-sky-400 text-center font-accent"
         >
           Modal Title
         </h2>
         <div
           id="modal-content"
-          class="text-lg sm:text-xl text-slate-300 mb-4 sm:mb-6 overflow-y-auto flex-grow"
+          class="text-lg sm:text-xl text-slate-300 mb-4 sm:mb-6 overflow-y-auto flex-grow font-question"
         >
           <p>Modal content goes here.</p>
         </div>
@@ -566,7 +597,7 @@
         boxGridContainer.innerHTML = "";
         mysteryBoxes.forEach((box) => {
           const boxEl = document.createElement("div");
-          boxEl.className = `mystery-box bg-sky-600 hover:bg-sky-700 rounded-lg flex items-center justify-center text-2xl md:text-3xl font-bold cursor-pointer p-4 shadow-lg ${
+          boxEl.className = `mystery-box bg-sky-600 hover:bg-sky-700 rounded-lg flex items-center justify-center text-2xl md:text-3xl font-bold cursor-pointer p-4 shadow-lg font-game-elements ${
             box.opened ? "opened" : ""
           }`;
           boxEl.textContent = `Box ${box.id}`;
@@ -585,17 +616,17 @@
             "bg-slate-700 p-3 rounded-lg shadow flex flex-col justify-between";
           const currencyClass =
             team.currency < MIN_BID_AMOUNT ? "currency-low font-bold" : "";
-          teamScoreEl.innerHTML = `<div><h3 class="text-lg sm:text-xl font-semibold text-sky-300 truncate" title="${
+          teamScoreEl.innerHTML = `<div><h3 class="text-lg sm:text-xl font-semibold text-sky-300 truncate font-accent" title="${
             team.name
           }">${
             team.name
-          }</h3><p class="text-2xl sm:text-3xl font-bold my-1">Score: ${
+          }</h3><p class="text-2xl sm:text-3xl font-bold my-1 font-game-elements">Score: ${
             team.score
-          }</p><p class="text-md sm:text-lg ${currencyClass}">Currency: $${
+          }</p><p class="text-md sm:text-lg ${currencyClass} font-game-elements">Currency: $${
             team.currency
           }</p>${
             team.hasShield
-              ? '<p class="text-xs text-cyan-400 mt-1">🛡️ Shield Active</p>'
+              ? '<p class="text-xs text-cyan-400 mt-1 font-primary">🛡️ Shield Active</p>'
               : ""
           }</div><div class="mt-2 space-x-1"><button data-team-id="${
             team.id
@@ -649,13 +680,13 @@
         if (!box) return;
         let modalTimerDisplay;
         const contentHTML = `
-                <p class="text-sm text-slate-400 mb-3 text-center" style="font-size: 1.5rem;">Bidding starts at $${MIN_BID_AMOUNT}. Teacher manages verbal bids.</p>
+                <p class="text-sm text-slate-400 mb-3 text-center font-primary" style="font-size: 1.5rem;">Bidding starts at $${MIN_BID_AMOUNT}. Teacher manages verbal bids.</p>
                 <div class="text-center mb-4">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 text-red-500 mx-auto mb-3">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
-                    <div id="modal-timer-display" class="timer-display-modal">15</div>
+                    <div id="modal-timer-display" class="timer-display-modal font-game-elements">15</div>
                     <button id="modal-start-bid-timer-btn" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold py-2 px-4 rounded-md modal-action-button">Start 15s Bid Timer</button>
                 </div>
                 <div class="mb-3">
@@ -1105,7 +1136,7 @@
         startMusicPlayer.currentTime = 0;
         playSound("powerUp");
         teams.sort((a, b) => b.score - a.score);
-        let leaderboardHTML = '<ol class="list-decimal list-inside space-y-3">';
+        let leaderboardHTML = '<ol class="list-decimal list-inside space-y-3 font-game-elements">';
         teams.slice(0, 3).forEach((team, index) => {
           leaderboardHTML += `<li class="text-2xl ${
             index === 0
@@ -1113,7 +1144,7 @@
               : index === 1
               ? "text-slate-300"
               : "text-orange-400"
-          }"><span class="font-semibold">${team.name}</span>: ${
+          }"><span class="font-semibold font-accent">${team.name}</span>: ${
             team.score
           } pts (Currency: $${team.currency})</li>`;
         });
