@@ -53,13 +53,14 @@
       }
       .box-grid-container {
         margin: 50px 0 50px 0;
-        max-width: 1200px;
+        max-width: 1400px;  /* Increased from 1200px */
         margin-left: auto;
         margin-right: auto;
       }
       .mystery-box {
-        min-height: 150px;
-        font-size: 1.5rem;
+        min-height: 180px;  /* Increased from 150px */
+        min-width: 200px;   /* Added minimum width */
+        font-size: 2rem;    /* Increased from 1.5rem */
       }
       .modal-content::-webkit-scrollbar {
         width: 8px;
@@ -136,19 +137,7 @@
         </select>
       </div>
       <div id="team-names-container" class="mb-8 space-y-4"></div>
-      <div class="mb-6">
-        <label
-          class="flex items-center justify-center space-x-2 text-slate-300"
-        >
-          <input
-            type="checkbox"
-            id="background-music-toggle"
-            class="form-checkbox h-5 w-5 text-sky-500 bg-slate-700 border-slate-600 rounded focus:ring-sky-500"
-            checked
-          />
-          <span>Enable Background Music</span>
-        </label>
-      </div>
+      <!-- Background music toggle removed -->
       <button
         id="start-game-btn"
         class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 px-6 rounded-lg text-xl transition"
@@ -177,9 +166,9 @@
       <div class="bg-slate-800 p-4 rounded-t-lg shadow-inner w-full mt-auto">
         <div
           id="teacher-panel"
-          class="mb-4 p-4 bg-slate-700 rounded-lg text-center min-h-[80px] teacher-panel"
+          class="mb-4 p-4 bg-slate-700 rounded-lg text-center min-h-[80px] teacher-panel flex items-center justify-center"
         >
-          <p id="teacher-panel-instruction" class="text-lg text-slate-300">
+          <p id="teacher-panel-instruction" class="text-lg text-slate-300 m-0">
             Select a Mystery Box to begin.
           </p>
         </div>
@@ -242,9 +231,7 @@
       const toggleFullscreenBtn = document.getElementById(
         "toggle-fullscreen-btn"
       );
-      const backgroundMusicToggle = document.getElementById(
-        "background-music-toggle"
-      );
+      // Background music toggle removed
 
       const boxGridContainer = document.getElementById("box-grid-container");
       const scoreboard = document.getElementById("scoreboard");
@@ -268,8 +255,27 @@
       let currentWinningBidderTeamId = null;
       let bidInterval = null;
       let gameSoundsMuted = false;
-      let backgroundMusicPlayer = new Audio("public/assets/music/start_music.m4a");
-      backgroundMusicPlayer.loop = false;
+      // Start music player - will play once when game starts
+      let startMusicPlayer = new Audio("public/assets/music/start_music.m4a");
+      startMusicPlayer.loop = false;
+
+      // Try to load correct sound with different extensions
+      let correctSoundPlayer;
+      try {
+        correctSoundPlayer = new Audio("public/assets/music/correct_sound.wav");
+        // If the file doesn't exist, this will still create an Audio object but it won't play
+      } catch (e) {
+        console.error("Error loading correct sound:", e);
+      }
+
+      // Try to load incorrect sound with different extensions
+      let incorrectSoundPlayer;
+      try {
+        incorrectSoundPlayer = new Audio("public/assets/music/incorrect_sound.wav");
+        // If the file doesn't exist, this will still create an Audio object but it won't play
+      } catch (e) {
+        console.error("Error loading incorrect sound:", e);
+      }
       let sfxPlayers = {};
 
       let boxesOpenedCount = 0;
@@ -451,13 +457,14 @@
           sfxPlayers[soundName]();
         }
       }
-      function toggleBackgroundMusic(play) {
-        if (play && backgroundMusicToggle.checked && !gameSoundsMuted) {
-          backgroundMusicPlayer.play().catch(e => {
-            console.log("Error playing background music:", e);
+      // Function to play start music once
+      function playStartMusic() {
+        if (!gameSoundsMuted) {
+          // Reset to beginning and play once
+          startMusicPlayer.currentTime = 0;
+          startMusicPlayer.play().catch(e => {
+            console.log("Error playing start music:", e);
           });
-        } else {
-          backgroundMusicPlayer.pause();
         }
       }
       gameSoundToggleBtn.addEventListener("click", () => {
@@ -467,11 +474,11 @@
           : "Mute Sounds";
         Tone.Destination.mute = gameSoundsMuted;
 
-        // Handle background music muting
+        // Handle all audio players muting
         if (gameSoundsMuted) {
-          backgroundMusicPlayer.pause();
-        } else if (backgroundMusicToggle.checked) {
-          toggleBackgroundMusic(true);
+          startMusicPlayer.pause();
+          correctSoundPlayer.pause();
+          incorrectSoundPlayer.pause();
         }
       });
       function toggleFullScreen() {
@@ -510,8 +517,8 @@
         if (Tone.context.state !== "running") {
           await Tone.start();
         }
-        // Reset the background music to the beginning
-        backgroundMusicPlayer.currentTime = 0;
+        // Play the start music once when game starts
+        playStartMusic();
         teams = [];
         const num = parseInt(numTeamsSelect.value);
         for (let i = 1; i <= num; i++) {
@@ -553,7 +560,6 @@
         renderScoreboard();
         updateWinningBidderSelectOptions(); // Call without arg to prep for modal
         resetTeacherPanel();
-        toggleBackgroundMusic(true);
       }
       startGameBtn.addEventListener("click", initializeGame);
       function renderMysteryBoxes() {
@@ -693,8 +699,7 @@
             "opacity-50",
             "cursor-not-allowed"
           );
-          // Pause background music during timer countdown
-          toggleBackgroundMusic(false);
+          // No need to pause background music as it only plays once at start
 
           let timeLeft = BID_TIME_SECONDS;
           modalTimerDisplay.textContent = timeLeft;
@@ -713,8 +718,7 @@
               clearInterval(bidInterval);
               playSound("timerEnd");
               modalTimerDisplay.textContent = "Time's Up!";
-              // Resume background music after timer ends
-              toggleBackgroundMusic(true);
+              // No need to resume background music as it only plays once at start
               // Remove this line that was adding text-sm class
               // modalTimerDisplay.classList.add("text-sm");
             }
@@ -722,8 +726,7 @@
         };
         modalCancelBidBtn.onclick = () => {
           clearInterval(bidInterval);
-          // Resume background music when canceling
-          toggleBackgroundMusic(true);
+          // No need to resume background music as it only plays once at start
           closeModal();
           resetTeacherPanel();
         };
@@ -757,8 +760,7 @@
           playSound("bidPlaced");
           renderScoreboard();
           clearInterval(bidInterval);
-          // Resume background music when awarding box
-          toggleBackgroundMusic(true);
+          // No need to resume background music as it only plays once at start
           closeModal();
           revealBoxContent();
         };
@@ -833,13 +835,39 @@
         const okayButtonHTML = `<button onclick="closeModal(); checkGameEndOrResetPanel();" class="bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-md modal-action-button">Okay</button>`;
 
         if (isCorrect) {
-          playSound("correct");
+          // Play correct sound using the Audio player instead of Tone.js
+          if (!gameSoundsMuted) {
+            if (correctSoundPlayer && correctSoundPlayer.src) {
+              correctSoundPlayer.currentTime = 0;
+              correctSoundPlayer.play().catch(e => {
+                console.log("Error playing correct sound:", e);
+                // Fallback to Tone.js if Audio API fails
+                playSound("correct");
+              });
+            } else {
+              // Fallback to Tone.js if audio file is not available
+              playSound("correct");
+            }
+          }
           let pointsAwarded = box.content.points;
           let message = `Congratulations ${team.name}! You've won <strong class='text-yellow-300 text-4xl'>${pointsAwarded}</strong> Mystery Points!`;
           updateScore(team.id, pointsAwarded, true, null);
           showModal("Correct Answer!", message, okayButtonHTML, false);
         } else {
-          playSound("incorrect");
+          // Play incorrect sound using the Audio player instead of Tone.js
+          if (!gameSoundsMuted) {
+            if (incorrectSoundPlayer && incorrectSoundPlayer.src) {
+              incorrectSoundPlayer.currentTime = 0;
+              incorrectSoundPlayer.play().catch(e => {
+                console.log("Error playing incorrect sound:", e);
+                // Fallback to Tone.js if Audio API fails
+                playSound("incorrect");
+              });
+            } else {
+              // Fallback to Tone.js if audio file is not available
+              playSound("incorrect");
+            }
+          }
           let message = `<span class="text-2xl">Sorry ${team.name}, that was not the correct answer.</span><br><span class="text-xl mt-2 block">No points awarded.</span>`;
           showModal("Incorrect Answer", message, okayButtonHTML, false);
         }
@@ -1072,9 +1100,9 @@
         }
       }
       function endGame() {
-        // Stop background music
-        backgroundMusicPlayer.pause();
-        backgroundMusicPlayer.currentTime = 0;
+        // Stop start music if it's still playing
+        startMusicPlayer.pause();
+        startMusicPlayer.currentTime = 0;
         playSound("powerUp");
         teams.sort((a, b) => b.score - a.score);
         let leaderboardHTML = '<ol class="list-decimal list-inside space-y-3">';
