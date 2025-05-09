@@ -243,6 +243,7 @@
       id="modal-container"
       class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden"
     >
+      <!-- Generic Modal -->
       <div
         id="generic-modal"
         class="modal bg-slate-800 p-6 sm:p-10 rounded-lg shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col"
@@ -269,6 +270,31 @@
           >
             Close
           </button>
+        </div>
+      </div>
+
+      <!-- Dedicated Instruction Modal -->
+      <div
+        id="instruction-modal"
+        class="modal bg-slate-800 p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-8xl max-h-[95vh] flex flex-col hidden"
+      >
+        <h2
+          id="instruction-modal-title"
+          class="text-3xl sm:text-4xl font-bold mb-4 sm:mb-6 text-sky-400 text-center font-accent"
+        >
+          Mystery Box Game Instructions
+        </h2>
+        <div
+          id="instruction-modal-content"
+          class="text-lg sm:text-xl text-slate-300 mb-4 sm:mb-6 overflow-y-visible flex-grow font-question"
+        >
+          <!-- Content will be dynamically inserted -->
+        </div>
+        <div
+          id="instruction-modal-actions"
+          class="mt-auto text-center space-x-2 sm:space-x-3"
+        >
+          <!-- Actions will be dynamically inserted -->
         </div>
       </div>
     </div>
@@ -301,6 +327,12 @@
       const modalTitle = document.getElementById("modal-title");
       const modalContent = document.getElementById("modal-content");
       const modalActions = document.getElementById("modal-actions");
+
+      // Instruction modal elements
+      const instructionModal = document.getElementById("instruction-modal");
+      const instructionModalTitle = document.getElementById("instruction-modal-title");
+      const instructionModalContent = document.getElementById("instruction-modal-content");
+      const instructionModalActions = document.getElementById("instruction-modal-actions");
 
       // --- Game State & Configuration ---
       let teams = [];
@@ -617,46 +649,50 @@
       }
       numTeamsSelect.addEventListener("change", updateTeamNameInputs);
       function showGameInstructionsModal() {
-        // Create content for the instructions modal
-        let instructionsHTML = `
-          <div class="space-y-8">
-            <div class="text-center mb-2">
-              <div class="inline-block p-3 bg-sky-500 bg-opacity-20 rounded-full mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p class="text-slate-300 text-lg">Welcome to</p>
-              <h2 class="text-3xl font-bold text-sky-400 font-accent">Mystery Box Challenge</h2>
+        // Create header content for the instructions modal
+        let headerHTML = `
+          <div class="text-center mb-4">
+            <div class="inline-block p-3 bg-sky-500 bg-opacity-20 rounded-full mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
+            <p class="text-slate-300 text-lg">Welcome to</p>
+            <h2 class="text-3xl font-bold text-sky-400 font-accent">Mystery Box Challenge</h2>
+          </div>
+        `;
 
-            <div class="bg-slate-700 bg-opacity-50 p-5 rounded-lg">
-              <h3 class="text-2xl font-bold text-sky-400 mb-3 font-accent flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                How to Play
-              </h3>
-              <ul class="list-disc pl-6 space-y-2 text-slate-300">
-                <li>Teams take turns selecting a Mystery Box.</li>
-                <li>Teams bid currency to win the right to open a box.</li>
-                <li>Boxes contain questions (${questionsData.length}) or power-ups (${powerUpsData.length}).</li>
-                <li>Answer questions correctly to earn points.</li>
-                <li>Use power-ups strategically to gain an advantage.</li>
-                <li>Each team starts with $${INITIAL_CURRENCY} currency.</li>
-                <li>Minimum bid is $${MIN_BID_AMOUNT} per box.</li>
-                <li>The team with the most points at the end wins!</li>
-              </ul>
-            </div>
+        // Create "How to Play" column content
+        let howToPlayHTML = `
+          <div class="bg-slate-700 bg-opacity-50 p-4 rounded-lg h-full">
+            <h3 class="text-xl font-bold text-sky-400 mb-2 font-accent flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              How to Play
+            </h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-300">
+              <li>Teams bid currency to win the right to open a box.</li>
+              <li>Boxes contain questions (${questionsData.length}) or power-ups (${powerUpsData.length}).</li>
+              <li>Answer questions correctly to earn points.</li>
+              <li>Use power-ups strategically to gain an advantage.</li>
+              <li>Each team starts with $${INITIAL_CURRENCY} currency.</li>
+              <li>Minimum bid is $${MIN_BID_AMOUNT} per box.</li>
+              <li>The team with the most points at the end <strong>WINS!</strong></li>
+            </ul>
+          </div>
+        `;
 
-            <div class="bg-slate-700 bg-opacity-50 p-5 rounded-lg">
-              <h3 class="text-2xl font-bold text-sky-400 mb-3 font-accent flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Power-ups (${uniquePowerUpCount()} types)
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        // Create "Power-ups" column content
+        let powerUpsHTML = `
+          <div class="bg-slate-700 bg-opacity-50 p-4 rounded-lg h-full">
+            <h3 class="text-xl font-bold text-sky-400 mb-2 font-accent flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Power-ups (${uniquePowerUpCount()} types)
+            </h3>
+            <div class="space-y-2">
         `;
 
         // Create a set to track unique power-up types
@@ -673,8 +709,8 @@
           let pointsText = "";
           if (powerUp.points) {
             pointsText = powerUp.points > 0 ?
-              `<span class="text-green-400">+${powerUp.points} points</span>` :
-              `<span class="text-red-400">${powerUp.points} points</span>`;
+              `<span class="text-green-400" style="font-size: 1.15rem;">+${powerUp.points} points</span>` :
+              `<span class="text-red-400" style="font-size: 1.15rem;">${powerUp.points} points</span>`;
           }
 
           // Choose an icon based on the power-up effect
@@ -707,34 +743,46 @@
           if (powerUp.effect === "steal_points") bgColorClass = "bg-purple-800 bg-opacity-50";
           if (powerUp.effect === "swap_points") bgColorClass = "bg-yellow-800 bg-opacity-50";
 
-          instructionsHTML += `
-            <div class="${bgColorClass} p-4 rounded-lg shadow-lg border border-slate-600">
+          powerUpsHTML += `
+            <div class="${bgColorClass} p-3 rounded-lg shadow-lg border border-slate-600">
               <div class="flex items-start">
                 <div class="bg-slate-800 p-2 rounded-full mr-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     ${iconPath}
                   </svg>
                 </div>
                 <div>
-                  <h4 class="text-xl font-bold text-yellow-300 mb-1 font-game-elements">${powerUp.name}</h4>
+                  <h4 class="text-lg font-bold text-yellow-300 mb-1 font-game-elements">${powerUp.name}</h4>
                   <p class="text-slate-300">${powerUp.description}</p>
-                  ${pointsText ? `<p class="mt-2 font-semibold">${pointsText}</p>` : ''}
+                  ${pointsText ? `<p class="mt-1 font-semibold text-sm">${pointsText}</p>` : ''}
                 </div>
               </div>
             </div>
           `;
         });
 
-        instructionsHTML += `
-              </div>
+        powerUpsHTML += `
+            </div>
+          </div>
+        `;
+
+        // Combine all sections into a two-column layout
+        let instructionsHTML = `
+          ${headerHTML}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="col-span-1">
+              ${howToPlayHTML}
+            </div>
+            <div class="col-span-1">
+              ${powerUpsHTML}
             </div>
           </div>
         `;
 
         // Create a button to start the game
         const startButtonHTML = `
-          <button id="continue-game-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg text-xl shadow-lg transform transition-transform hover:scale-105 pulse-animation modal-action-button">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button id="continue-game-btn" class="mt-2 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 pulse-animation modal-action-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -742,12 +790,13 @@
           </button>
         `;
 
-        // Show the modal with instructions
+        // Show the modal with instructions using the dedicated instruction modal
         showModal(
           "Mystery Box Game Instructions",
           instructionsHTML,
           startButtonHTML,
-          false // Not backdrop dismissible
+          false, // Not backdrop dismissible
+          "instruction" // Use the instruction modal
         );
 
         // Add event listener to the continue button
@@ -1296,27 +1345,54 @@
         title,
         messageContent,
         actionsHTML = "",
-        isBackdropDismissible = true
+        isBackdropDismissible = true,
+        modalType = "generic"
       ) {
-        modalTitle.textContent = title;
         currentModalIsBackdropDismissible = isBackdropDismissible;
 
-        if (typeof messageContent === "string") {
-          modalContent.innerHTML = messageContent;
-        } else if (messageContent instanceof HTMLElement) {
-          modalContent.innerHTML = "";
-          modalContent.appendChild(messageContent);
+        // Hide all modals first
+        genericModal.classList.add("hidden");
+        instructionModal.classList.add("hidden");
+
+        // Determine which modal to use
+        let currentModal, currentModalTitle, currentModalContent, currentModalActions;
+
+        if (modalType === "instruction") {
+          currentModal = instructionModal;
+          currentModalTitle = instructionModalTitle;
+          currentModalContent = instructionModalContent;
+          currentModalActions = instructionModalActions;
         } else {
-          modalContent.innerHTML = `<p>${messageContent}</p>`;
+          currentModal = genericModal;
+          currentModalTitle = modalTitle;
+          currentModalContent = modalContent;
+          currentModalActions = modalActions;
         }
 
+        // Show the selected modal
+        currentModal.classList.remove("hidden");
+
+        // Set the title
+        currentModalTitle.textContent = title;
+
+        // Set the content
+        if (typeof messageContent === "string") {
+          currentModalContent.innerHTML = messageContent;
+        } else if (messageContent instanceof HTMLElement) {
+          currentModalContent.innerHTML = "";
+          currentModalContent.appendChild(messageContent);
+        } else {
+          currentModalContent.innerHTML = `<p>${messageContent}</p>`;
+        }
+
+        // Set the actions
         const defaultCloseButton = document.getElementById("modal-close-btn");
         if (actionsHTML && actionsHTML.trim() !== "") {
-          modalActions.innerHTML = actionsHTML;
-          if (defaultCloseButton) defaultCloseButton.classList.add("hidden");
+          currentModalActions.innerHTML = actionsHTML;
+          if (defaultCloseButton && modalType === "generic") defaultCloseButton.classList.add("hidden");
         } else {
-          modalActions.innerHTML = "";
-          if (defaultCloseButton) {
+          currentModalActions.innerHTML = "";
+          if (defaultCloseButton && modalType === "generic") {
             defaultCloseButton.classList.remove("hidden");
             defaultCloseButton.onclick = closeModal;
             if (!isBackdropDismissible) {
@@ -1326,6 +1402,8 @@
             }
           }
         }
+
+        // Show the modal container
         modalContainer.style.display = "flex";
         modalContainer.classList.add("active");
       }
@@ -1335,6 +1413,11 @@
       function closeModal() {
         modalContainer.style.display = "none";
         modalContainer.classList.remove("active");
+
+        // Hide all modals
+        genericModal.classList.add("hidden");
+        instructionModal.classList.add("hidden");
+
         const defaultCloseButton = document.getElementById("modal-close-btn");
         if (defaultCloseButton) defaultCloseButton.classList.remove("hidden");
         // Universal call to checkGameEndOrResetPanel after ANY modal closes via explicit button or backdrop (if allowed)
