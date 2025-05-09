@@ -314,7 +314,7 @@
 
       const INITIAL_CURRENCY = 1500;
       const BID_TIME_SECONDS = 15;
-      const NUM_MYSTERY_BOXES = 10;
+      const NUM_MYSTERY_BOXES = 15;
       const MIN_BID_AMOUNT = 100;
 
       // --- Pre-defined Game Content ---
@@ -323,7 +323,7 @@
       questionsData.push(
         {
           id: "q1",
-          text: "In paragraph 1, what does the number “90%” mean?",
+          text: "In paragraph 1, what does the number '90%' mean?",
           answer: "90% of Gen Z have a smartphone by age 15.",
           points: 150,
           type: "Q&A",
@@ -337,7 +337,7 @@
         },
         {
           id: "q3",
-          text: "In paragraph 3, what does the number “1 in 4” mean?",
+          text: "In paragraph 3, what does the number '1 in 4' mean?",
           answer:
             "1 in 4 Gen Z viewers buy something during livestream shopping events.",
           points: 100,
@@ -345,7 +345,7 @@
         },
         {
           id: "q4",
-          text: "In paragraph 4, what does the number “60%” mean?",
+          text: "In paragraph 4, what does the number '60%' mean?",
           answer: "60% of student payments are made by phone.",
           points: 150,
           type: "Q&A",
@@ -359,6 +359,28 @@
         },
         {
           id: "q6",
+          text: "In paragraph 6, how much money was raised for shelters in 2022?",
+          answer:
+            "Over $50,000.",
+          points: 200,
+          type: "Q&A",
+        },
+        {
+          id: "q7",
+          text: "True or False: Gen Z still prefers using cash on campus.",
+          answer: "False.",
+          points: 50,
+          type: "Q&A",
+        },
+        {
+          id: "q8",
+          text: "True or False: Gen Z only shops at big malls.",
+          answer: "False.",
+          points: 50,
+          type: "Q&A",
+        },
+        {
+          id: "q9",
           text: "True or False: Gen Z likes brands that support causes they care about.",
           answer: "True.",
           points: 50,
@@ -401,8 +423,16 @@
           id: "p5",
           name: "Shield",
           description:
-            "Your team is immune to the next 'Steal' or 'Bomb' power-up directed at you. (One-time use)",
+            "Your team is immune to the next 'Steal' or 'Bomb' power-up directed at you. \n(One-time use)",
           effect: "shield",
+          type: "Power-up",
+        },
+        {
+          id: "p6",
+          name: "Steal Points",
+          description: "Take 100 points from another team. Choose wisely!",
+          effect: "steal_points",
+          points: 100,
           type: "Power-up",
         }
       );
