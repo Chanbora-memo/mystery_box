@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mystery Box Jeopardy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+      }
+      .mystery-box {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      .mystery-box:not(.opened):hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      }
+      .mystery-box.opened {
+        background-color: #4a5568 !important; /* Tailwind gray-700 */
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+      .modal {
+        display: none; /* Hidden by default */
+        animation: fadeIn 0.3s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .timer-display-modal {
+        /* Specific class for timer in modal */
+        font-size: 3.5rem; /* Large timer size for modal */
+        font-weight: bold;
+        color: #ef4444; /* Tailwind red-500 */
+        margin-top: 0.5rem; /* Increased space below SVG */
+        margin-bottom: 1rem;
+      }
+      .teacher-panel button,
+      .teacher-panel select,
+      .teacher-panel input[type="number"] {
+        padding: 0.75rem 1.5rem;
+        margin: 0.25rem;
+      }
+      .box-grid-container {
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .mystery-box {
+        min-height: 150px;
+        font-size: 1.5rem;
+      }
+      .modal-content::-webkit-scrollbar {
+        width: 8px;
+      }
+      .modal-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+      .modal-content::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+      }
+      .modal-content::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+      .currency-low {
+        color: #fbbf24;
+      }
+      .qa-modal-text {
+        font-size: 1.5rem;
+        line-height: 1.6;
+      }
+      .qa-modal-text strong {
+        font-weight: 600;
+      }
+      .modal-action-button {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+      }
+
+      /* Bidding Modal Specific Styles */
+      .bidding-modal-input {
+        background-color: #4b5563; /* Tailwind gray-600 */
+        border: 1px solid #6b7280; /* Tailwind gray-500 */
+        color: white;
+        padding: 0.5rem;
+        border-radius: 0.375rem; /* rounded-md */
+        width: 100%;
+        margin-top: 0.25rem;
+      }
+      .bidding-modal-label {
+        display: block;
+        text-align: left;
+        font-size: 0.875rem; /* text-sm */
+        color: #d1d5db; /* Tailwind gray-300 */
+        margin-bottom: 0.25rem;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-900 text-white overflow-hidden h-screen flex flex-col items-center justify-center"
+  >
+    <div
+      id="setup-screen"
+      class="w-full max-w-lg p-8 bg-slate-800 rounded-lg shadow-2xl text-center"
+    >
+      <h1 class="text-4xl font-bold mb-8 text-sky-400">
+        Mystery Box Jeopardy Setup
+      </h1>
+      <div class="mb-6">
+        <label for="num-teams" class="block text-lg mb-2 text-slate-300"
+          >Number of Teams (2-6):</label
+        >
+        <select
+          id="num-teams"
+          class="w-full p-3 bg-slate-700 border border-slate-600 rounded-md text-lg focus:ring-sky-500 focus:border-sky-500"
+        >
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+      <div id="team-names-container" class="mb-8 space-y-4"></div>
+      <div class="mb-6">
+        <label
+          class="flex items-center justify-center space-x-2 text-slate-300"
+        >
+          <input
+            type="checkbox"
+            id="background-music-toggle"
+            class="form-checkbox h-5 w-5 text-sky-500 bg-slate-700 border-slate-600 rounded focus:ring-sky-500"
+            checked
+          />
+          <span>Enable Background Music</span>
+        </label>
+      </div>
+      <button
+        id="start-game-btn"
+        class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 px-6 rounded-lg text-xl transition"
+      >
+        Start Game
+      </button>
+      <button
+        id="toggle-fullscreen-btn"
+        class="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-5 rounded-lg text-lg transition"
+      >
+        Enter Fullscreen
+      </button>
+    </div>
+
+    <div
+      id="game-screen"
+      class="hidden w-full h-full flex flex-col p-4 bg-slate-900"
+    >
+      <div
+        id="box-grid-container"
+        class="box-grid-container flex-grow grid grid-cols-5 gap-4 p-4"
+      ></div>
+
+      <div class="bg-slate-800 p-4 rounded-t-lg shadow-inner mt-auto">
+        <div
+          id="teacher-panel"
+          class="mb-4 p-4 bg-slate-700 rounded-lg text-center min-h-[80px] teacher-panel"
+        >
+          <p id="teacher-panel-instruction" class="text-lg text-slate-300">
+            Select a Mystery Box to begin.
+          </p>
+        </div>
+        <div
+          id="scoreboard"
+          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center"
+        ></div>
+      </div>
+      <button
+        id="game-sound-toggle-btn"
+        class="fixed top-4 right-4 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg text-sm z-20"
+      >
+        Mute Sounds
+      </button>
+    </div>
+
+    <div
+      id="modal-container"
+      class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden"
+    >
+      <div
+        id="generic-modal"
+        class="modal bg-slate-800 p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col"
+      >
+        <h2
+          id="modal-title"
+          class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-sky-400 text-center"
+        >
+          Modal Title
+        </h2>
+        <div
+          id="modal-content"
+          class="text-base sm:text-lg text-slate-300 mb-4 sm:mb-6 overflow-y-auto flex-grow"
+        >
+          <p>Modal content goes here.</p>
+        </div>
+        <div
+          id="modal-actions"
+          class="mt-auto text-center space-x-2 sm:space-x-3"
+        >
+          <button
+            id="modal-close-btn"
+            class="bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 sm:py-3 sm:px-6 rounded-md transition modal-action-button"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // --- DOM Elements ---
+      const setupScreen = document.getElementById("setup-screen");
+      const gameScreen = document.getElementById("game-screen");
+      const numTeamsSelect = document.getElementById("num-teams");
+      const teamNamesContainer = document.getElementById(
+        "team-names-container"
+      );
+      const startGameBtn = document.getElementById("start-game-btn");
+      const toggleFullscreenBtn = document.getElementById(
+        "toggle-fullscreen-btn"
+      );
+      const backgroundMusicToggle = document.getElementById(
+        "background-music-toggle"
+      );
+
+      const boxGridContainer = document.getElementById("box-grid-container");
+      const scoreboard = document.getElementById("scoreboard");
+      const teacherPanelInstruction = document.getElementById(
+        "teacher-panel-instruction"
+      );
+      const gameSoundToggleBtn = document.getElementById(
+        "game-sound-toggle-btn"
+      );
+
+      const modalContainer = document.getElementById("modal-container");
+      const genericModal = document.getElementById("generic-modal");
+      const modalTitle = document.getElementById("modal-title");
+      const modalContent = document.getElementById("modal-content");
+      const modalActions = document.getElementById("modal-actions");
+
+      // --- Game State & Configuration ---
+      let teams = [];
+      let mysteryBoxes = [];
+      let currentSelectedBoxId = null;
+      let currentWinningBidderTeamId = null;
+      let bidInterval = null;
+      let gameSoundsMuted = false;
+      let backgroundMusicPlayer = null;
+      let sfxPlayers = {};
+      let isDoublePointsActive = false;
+      let boxesOpenedCount = 0;
+      let currentModalIsBackdropDismissible = true;
+
+      const INITIAL_CURRENCY = 1500;
+      const BID_TIME_SECONDS = 10;
+      const NUM_MYSTERY_BOXES = 15;
+      const MIN_BID_AMOUNT = 100;
+
+      // --- Pre-defined Game Content ---
+      const questionsData = [];
+      const powerUpsData = [];
+      questionsData.push(
+        {
+          id: "q1",
+          text: "In paragraph 1, what does the number “90%” mean?",
+          answer: "90% of Gen Z have a smartphone by age 15.",
+          points: 150,
+          type: "Q&A",
+        },
+        {
+          id: "q2",
+          text: "In paragraph 2, how much money do people spend on delivery apps each month?",
+          answer: "Around $5 million.",
+          points: 100,
+          type: "Q&A",
+        },
+        {
+          id: "q3",
+          text: "In paragraph 3, what does the number “1 in 4” mean?",
+          answer:
+            "1 in 4 Gen Z viewers buy something during livestream shopping events.",
+          points: 100,
+          type: "Q&A",
+        },
+        {
+          id: "q4",
+          text: "In paragraph 4, what does the number “60%” mean?",
+          answer: "60% of student payments are made by phone.",
+          points: 150,
+          type: "Q&A",
+        },
+        {
+          id: "q5",
+          text: "In paragraph 5, what do 40% of Gen Z buy at least once a month?",
+          answer: "Second-hand (used) clothes.",
+          points: 250,
+          type: "Q&A",
+        },
+        {
+          id: "q6",
+          text: "In paragraph 6, how much money was raised for shelters in 2022?",
+          answer: "Over $50,000.",
+          points: 200,
+          type: "Q&A",
+        },
+        {
+          id: "q7",
+          text: "True or False: Gen Z still prefers using cash on campus.",
+          answer: "False.",
+          points: 50,
+          type: "Q&A",
+        },
+        {
+          id: "q8",
+          text: "True or False: Gen Z only shops at big malls.",
+          answer: "False.",
+          points: 50,
+          type: "Q&A",
+        },
+        {
+          id: "q9",
+          text: "True or False: Gen Z likes brands that support causes they care about.",
+          answer: "True.",
+          points: 50,
+          type: "Q&A",
+        }
+      );
+      powerUpsData.push(
+        {
+          id: "p1",
+          name: "Swap Points",
+          description: "Switch total points with any team.",
+          effect: "swap_points",
+          type: "Power-up",
+        },
+        {
+          id: "p2",
+          name: "Steal Points",
+          description: "Take 100 points from another team. Choose wisely!",
+          effect: "steal_points",
+          points: 100,
+          type: "Power-up",
+        },
+        {
+          id: "p3",
+          name: "Bomb",
+          description: "Uh-oh… lose 100 points. Better luck next round!",
+          effect: "bomb",
+          points: -100,
+          type: "Power-up",
+        },
+        {
+          id: "p4",
+          name: "Double Points",
+          description:
+            "The next Q&A box is worth double points for the team that answers it correctly!",
+          effect: "double_points",
+          type: "Power-up",
+        },
+        {
+          id: "p5",
+          name: "Shield",
+          description:
+            "Your team is immune to the next 'Steal' or 'Bomb' power-up directed at you. (One-time use)",
+          effect: "shield",
+          type: "Power-up",
+        },
+        {
+          id: "p6",
+          name: "Bonus Points",
+          description: "Your team instantly gains 100 points!",
+          effect: "bonus_points",
+          points: 100,
+          type: "Power-up",
+        }
+      );
+
+      // --- Sound Engine (Tone.js) ---
+      function setupSounds() {
+        backgroundMusicPlayer = new Tone.Loop((time) => {
+          const synth = new Tone.Synth({
+            oscillator: { type: "fatsawtooth" },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.5 },
+            volume: -25,
+          }).toDestination();
+          synth.triggerAttackRelease(
+            ["C3", "E3", "G3", "B3"][Math.floor(Math.random() * 4)],
+            "8n",
+            time
+          );
+          synth.triggerAttackRelease(
+            ["D3", "F#3", "A3", "C4"][Math.floor(Math.random() * 4)],
+            "8n",
+            time + Tone.Time("8n").toSeconds()
+          );
+        }, "1m").start(0);
+        sfxPlayers.correct = () =>
+          new Tone.Synth({
+            oscillator: { type: "triangle" },
+            envelope: {
+              attack: 0.005,
+              decay: 0.1,
+              sustain: 0.05,
+              release: 0.1,
+            },
+            volume: -10,
+          })
+            .toDestination()
+            .triggerAttackRelease("C5", "8n");
+        sfxPlayers.incorrect = () =>
+          new Tone.Synth({
+            oscillator: { type: "square" },
+            envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 },
+            volume: -10,
+          })
+            .toDestination()
+            .triggerAttackRelease("C3", "4n");
+        sfxPlayers.timerTick = () =>
+          new Tone.MembraneSynth({
+            pitchDecay: 0.008,
+            octaves: 2,
+            oscillator: { type: "sine" },
+            envelope: {
+              attack: 0.0006,
+              decay: 0.25,
+              sustain: 0,
+              release: 0.08,
+            },
+            volume: -15,
+          })
+            .toDestination()
+            .triggerAttackRelease("C4", "32n");
+        sfxPlayers.timerEnd = () =>
+          new Tone.NoiseSynth({
+            noise: { type: "pink" },
+            envelope: { attack: 0.001, decay: 0.15, sustain: 0 },
+            volume: -10,
+          })
+            .toDestination()
+            .triggerAttackRelease("2n");
+        sfxPlayers.boxSelect = () =>
+          new Tone.Synth({
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 },
+            volume: -15,
+          })
+            .toDestination()
+            .triggerAttackRelease("E4", "16n");
+        sfxPlayers.powerUp = () =>
+          new Tone.Synth({
+            oscillator: { type: "sawtooth" },
+            envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.2 },
+            volume: -10,
+          })
+            .toDestination()
+            .triggerAttackRelease("G4", "8n", "+0", 0.8);
+        sfxPlayers.bidPlaced = () =>
+          new Tone.Synth({
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.1 },
+            volume: -12,
+          })
+            .toDestination()
+            .triggerAttackRelease("A4", "16n");
+      }
+      function playSound(soundName) {
+        if (
+          !gameSoundsMuted &&
+          Tone.context.state === "running" &&
+          sfxPlayers[soundName]
+        ) {
+          sfxPlayers[soundName]();
+        }
+      }
+      function toggleBackgroundMusic(play) {
+        if (Tone.context.state !== "running") return;
+        if (play && backgroundMusicToggle.checked) {
+          Tone.Transport.start();
+        } else {
+          Tone.Transport.pause();
+        }
+      }
+      gameSoundToggleBtn.addEventListener("click", () => {
+        gameSoundsMuted = !gameSoundsMuted;
+        gameSoundToggleBtn.textContent = gameSoundsMuted
+          ? "Unmute Sounds"
+          : "Mute Sounds";
+        Tone.Destination.mute = gameSoundsMuted;
+      });
+      function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch((err) => {
+            showModal(
+              "Fullscreen Error",
+              `Could not enter fullscreen mode: ${err.message}.`
+            );
+          });
+          toggleFullscreenBtn.textContent = "Exit Fullscreen";
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+            toggleFullscreenBtn.textContent = "Enter Fullscreen";
+          }
+        }
+      }
+      toggleFullscreenBtn.addEventListener("click", toggleFullScreen);
+      function updateTeamNameInputs() {
+        const num = parseInt(numTeamsSelect.value);
+        teamNamesContainer.innerHTML = "";
+        for (let i = 1; i <= num; i++) {
+          const input = document.createElement("input");
+          input.type = "text";
+          input.id = `team-name-${i}`;
+          input.placeholder = `Team ${i} Name`;
+          input.className =
+            "w-full p-3 bg-slate-700 border border-slate-600 rounded-md text-lg focus:ring-sky-500 focus:border-sky-500";
+          input.value = `Team ${i}`;
+          teamNamesContainer.appendChild(input);
+        }
+      }
+      numTeamsSelect.addEventListener("change", updateTeamNameInputs);
+      async function initializeGame() {
+        if (Tone.context.state !== "running") {
+          await Tone.start();
+        }
+        // setupSounds() is now called at the end of the script
+        teams = [];
+        const num = parseInt(numTeamsSelect.value);
+        for (let i = 1; i <= num; i++) {
+          const nameInput = document.getElementById(`team-name-${i}`);
+          teams.push({
+            id: i,
+            name: nameInput.value || `Team ${i}`,
+            score: 0,
+            currency: INITIAL_CURRENCY,
+            hasShield: false,
+          });
+        }
+        let availableContent = [...questionsData, ...powerUpsData];
+        availableContent.sort(() => Math.random() - 0.5);
+        mysteryBoxes = [];
+        for (let i = 0; i < NUM_MYSTERY_BOXES; i++) {
+          mysteryBoxes.push({
+            id: i + 1,
+            content: availableContent[i] || {
+              id: `empty${i}`,
+              type: "Empty",
+              text: "This box is empty!",
+              points: 0,
+            },
+            opened: false,
+          });
+        }
+        boxesOpenedCount = 0;
+        isDoublePointsActive = false;
+        setupScreen.classList.add("hidden");
+        gameScreen.classList.remove("hidden");
+        document.body.classList.remove(
+          "items-center",
+          "justify-center",
+          "h-screen",
+          "overflow-hidden"
+        );
+        document.body.classList.add("flex", "flex-col", "min-h-screen");
+        renderMysteryBoxes();
+        renderScoreboard();
+        updateWinningBidderSelectOptions(); // Call without arg to prep for modal
+        resetTeacherPanel();
+        toggleBackgroundMusic(true);
+      }
+      startGameBtn.addEventListener("click", initializeGame);
+      function renderMysteryBoxes() {
+        boxGridContainer.innerHTML = "";
+        mysteryBoxes.forEach((box) => {
+          const boxEl = document.createElement("div");
+          boxEl.className = `mystery-box bg-sky-600 hover:bg-sky-700 rounded-lg flex items-center justify-center text-2xl md:text-3xl font-bold cursor-pointer p-4 shadow-lg ${
+            box.opened ? "opened" : ""
+          }`;
+          boxEl.textContent = `Box ${box.id}`;
+          boxEl.dataset.boxId = box.id;
+          if (!box.opened) {
+            boxEl.addEventListener("click", () => handleBoxSelect(box.id));
+          }
+          boxGridContainer.appendChild(boxEl);
+        });
+      }
+      function renderScoreboard() {
+        scoreboard.innerHTML = "";
+        teams.forEach((team) => {
+          const teamScoreEl = document.createElement("div");
+          teamScoreEl.className =
+            "bg-slate-700 p-3 rounded-lg shadow flex flex-col justify-between";
+          const currencyClass =
+            team.currency < MIN_BID_AMOUNT ? "currency-low font-bold" : "";
+          teamScoreEl.innerHTML = `<div><h3 class="text-lg sm:text-xl font-semibold text-sky-300 truncate" title="${
+            team.name
+          }">${
+            team.name
+          }</h3><p class="text-2xl sm:text-3xl font-bold my-1">Score: ${
+            team.score
+          }</p><p class="text-md sm:text-lg ${currencyClass}">Currency: $${
+            team.currency
+          }</p>${
+            team.hasShield
+              ? '<p class="text-xs text-cyan-400 mt-1">🛡️ Shield Active</p>'
+              : ""
+          }</div><div class="mt-2 space-x-1"><button data-team-id="${
+            team.id
+          }" data-amount="50" class="adj-score-btn bg-green-600 hover:bg-green-700 text-xs px-2 py-1 rounded">+</button><button data-team-id="${
+            team.id
+          }" data-amount="-50" class="adj-score-btn bg-red-600 hover:bg-red-700 text-xs px-2 py-1 rounded">-</button></div>`;
+          scoreboard.appendChild(teamScoreEl);
+        });
+        document.querySelectorAll(".adj-score-btn").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            const teamId = parseInt(e.target.dataset.teamId);
+            const amount = parseInt(e.target.dataset.amount);
+            updateScore(teamId, amount, false, null);
+          });
+        });
+      }
+
+      function updateWinningBidderSelectOptions(selectElement) {
+        if (!selectElement) return;
+        selectElement.innerHTML =
+          '<option value="">Select Winning Bidder</option>';
+        teams.forEach((team) => {
+          const option = document.createElement("option");
+          option.value = team.id;
+          option.textContent = `${team.name} ($${team.currency})`;
+          if (team.currency < MIN_BID_AMOUNT) {
+            option.disabled = true;
+            option.textContent += " - Not enough to bid";
+          }
+          selectElement.appendChild(option);
+        });
+      }
+
+      function resetTeacherPanel() {
+        teacherPanelInstruction.textContent = "Select a Mystery Box to begin.";
+        currentSelectedBoxId = null;
+        currentWinningBidderTeamId = null;
+      }
+
+      function handleBoxSelect(boxId) {
+        const box = mysteryBoxes.find((b) => b.id === boxId);
+        if (box.opened) return;
+        playSound("boxSelect");
+        currentSelectedBoxId = boxId;
+        teacherPanelInstruction.textContent = `Bidding for Box ${boxId}...`;
+        showBiddingModal(boxId);
+      }
+
+      function showBiddingModal(boxId) {
+        const box = mysteryBoxes.find((b) => b.id === boxId);
+        if (!box) return;
+        let modalTimerDisplay;
+        const contentHTML = `
+                <p class="text-sm text-slate-400 mb-3 text-center">Bidding starts at $${MIN_BID_AMOUNT}. Teacher manages verbal bids.</p>
+                <div class="text-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-16 h-16 text-red-500 mx-auto mb-3">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <div id="modal-timer-display" class="timer-display-modal">10</div>
+                    <button id="modal-start-bid-timer-btn" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold py-2 px-4 rounded-md modal-action-button">Start 10s Bid Timer</button>
+                </div>
+                <div class="mb-3">
+                    <label for="modal-winning-bidder-select" class="bidding-modal-label">Winning Team:</label>
+                    <select id="modal-winning-bidder-select" class="bidding-modal-input"></select>
+                </div>
+                <div>
+                    <label for="modal-winning-bid-amount" class="bidding-modal-label">Winning Bid Amount ($):</label>
+                    <input type="number" id="modal-winning-bid-amount" placeholder="e.g., 150" class="bidding-modal-input" min="${MIN_BID_AMOUNT}">
+                </div>`;
+        const actionsHTML = `
+                <button id="modal-cancel-bid-btn" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold rounded-md modal-action-button">Cancel Bid</button>
+                <button id="modal-award-box-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-md modal-action-button">Award Box</button>`;
+
+        showModal(
+          `Bidding for MYSTERY BOX ${boxId}`,
+          contentHTML,
+          actionsHTML,
+          false
+        );
+
+        modalTimerDisplay = document.getElementById("modal-timer-display");
+        const modalStartBidTimerBtn = document.getElementById(
+          "modal-start-bid-timer-btn"
+        );
+        const modalWinningBidderSelect = document.getElementById(
+          "modal-winning-bidder-select"
+        );
+        const modalWinningBidAmountInput = document.getElementById(
+          "modal-winning-bid-amount"
+        );
+        const modalCancelBidBtn = document.getElementById(
+          "modal-cancel-bid-btn"
+        );
+        const modalAwardBoxBtn = document.getElementById("modal-award-box-btn");
+        updateWinningBidderSelectOptions(modalWinningBidderSelect);
+
+        modalStartBidTimerBtn.onclick = () => {
+          modalStartBidTimerBtn.disabled = true;
+          modalStartBidTimerBtn.classList.add(
+            "opacity-50",
+            "cursor-not-allowed"
+          );
+          let timeLeft = BID_TIME_SECONDS;
+          modalTimerDisplay.textContent = timeLeft;
+          modalTimerDisplay.classList.remove("text-sm");
+          playSound("timerTick");
+          clearInterval(bidInterval);
+          bidInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft > 0) {
+              modalTimerDisplay.textContent = timeLeft;
+              playSound("timerTick");
+            } else if (timeLeft === 0) {
+              modalTimerDisplay.textContent = "0";
+              playSound("timerTick");
+            } else {
+              clearInterval(bidInterval);
+              playSound("timerEnd");
+              modalTimerDisplay.textContent = "Time's Up!";
+              modalTimerDisplay.classList.add("text-sm");
+            }
+          }, 1000);
+        };
+        modalCancelBidBtn.onclick = () => {
+          clearInterval(bidInterval);
+          closeModal();
+          resetTeacherPanel();
+        };
+        modalAwardBoxBtn.onclick = () => {
+          const selectedTeamId = modalWinningBidderSelect.value;
+          const bidAmount = parseInt(modalWinningBidAmountInput.value);
+          if (!selectedTeamId) {
+            alert("Please select the winning team.");
+            return;
+          }
+          if (isNaN(bidAmount) || bidAmount <= 0) {
+            alert("Please enter a valid winning bid amount greater than $0.");
+            return;
+          }
+          if (bidAmount < MIN_BID_AMOUNT) {
+            alert(`Minimum bid amount is $${MIN_BID_AMOUNT}.`);
+            return;
+          }
+          currentWinningBidderTeamId = parseInt(selectedTeamId);
+          const winningTeam = teams.find(
+            (t) => t.id === currentWinningBidderTeamId
+          );
+          if (!winningTeam) return;
+          if (bidAmount > winningTeam.currency) {
+            alert(
+              `${winningTeam.name} does not have enough currency for this bid ($${bidAmount}). Their current currency is $${winningTeam.currency}.`
+            );
+            return;
+          }
+          winningTeam.currency -= bidAmount;
+          playSound("bidPlaced");
+          renderScoreboard();
+          clearInterval(bidInterval);
+          closeModal();
+          revealBoxContent();
+        };
+      }
+
+      function revealBoxContent() {
+        const box = mysteryBoxes.find((b) => b.id === currentSelectedBoxId);
+        if (!box || box.opened) return;
+        box.opened = true;
+        boxesOpenedCount++;
+        renderMysteryBoxes();
+        teacherPanelInstruction.textContent = `Resolving Box ${currentSelectedBoxId}...`;
+        const content = box.content;
+        if (content.type === "Q&A") {
+          const revealAnswerInModalBtnHTML = `<button id="modal-reveal-answer-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-md modal-action-button">Reveal Answer</button>`;
+          showModal(
+            `Question - Box ${currentSelectedBoxId}`,
+            `<p class="text-2xl">${content.text}</p>`,
+            revealAnswerInModalBtnHTML,
+            false
+          );
+          document.getElementById("modal-reveal-answer-btn").onclick = () =>
+            showAnswerInModal();
+        } else if (content.type === "Power-up") {
+          playSound("powerUp");
+          const okayButtonHTML = `<button onclick="closeModal(); checkGameEndOrResetPanel();" class="bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-md modal-action-button">Okay</button>`;
+          showModal(
+            `Power-up: ${content.name}`,
+            `<p class="text-xl">${content.description}</p>`,
+            okayButtonHTML,
+            false
+          );
+          applyPowerUp(content);
+        } else {
+          teacherPanelInstruction.textContent = `Box ${currentSelectedBoxId}: ${
+            content.text || "This box is empty."
+          }`;
+          const okayButtonHTML = `<button onclick="closeModal(); checkGameEndOrResetPanel();" class="bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-md modal-action-button">Okay</button>`;
+          showModal(
+            `Box ${currentSelectedBoxId}`,
+            `<p class="text-xl">${content.text || "This box is empty."}</p>`,
+            okayButtonHTML,
+            false
+          );
+        }
+      }
+
+      function showAnswerInModal() {
+        const box = mysteryBoxes.find((b) => b.id === currentSelectedBoxId);
+        if (!box || box.content.type !== "Q&A") return;
+        const content = box.content;
+        const qaActionsHTML = `
+                <button id="modal-correct-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold rounded-md modal-action-button">Correct</button>
+                <button id="modal-incorrect-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold rounded-md modal-action-button">Incorrect</button>`;
+        showModal(
+          `Question & Answer - Box ${currentSelectedBoxId}`,
+          `<div class='space-y-4'><p class='text-xl'><strong class='text-sky-400'>Q:</strong> ${content.text}</p><hr class='border-slate-600 my-3'><p class='text-xl'><strong class='text-green-400'>A:</strong> ${content.answer}</p></div>`,
+          qaActionsHTML,
+          false
+        );
+        document.getElementById("modal-correct-btn").onclick = () =>
+          handleAnswer(true);
+        document.getElementById("modal-incorrect-btn").onclick = () =>
+          handleAnswer(false);
+      }
+
+      function handleAnswer(isCorrect) {
+        const box = mysteryBoxes.find((b) => b.id === currentSelectedBoxId);
+        const team = teams.find((t) => t.id === currentWinningBidderTeamId);
+        if (!box || !team) return;
+
+        const okayButtonHTML = `<button onclick="closeModal(); checkGameEndOrResetPanel();" class="bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-md modal-action-button">Okay</button>`;
+
+        if (isCorrect) {
+          playSound("correct");
+          let pointsAwarded = box.content.points;
+          let message = `Congratulations ${team.name}! You've won <strong class='text-yellow-300 text-2xl'>${pointsAwarded}</strong> Mystery Points!`;
+          if (isDoublePointsActive) {
+            pointsAwarded *= 2;
+            isDoublePointsActive = false;
+            message = `${team.name} gets <strong class='text-yellow-300 text-2xl'>${pointsAwarded}</strong> points! (This was a double points question). ${message}`;
+          }
+          updateScore(team.id, pointsAwarded, true, null);
+          showModal("Correct Answer!", message, okayButtonHTML, false);
+        } else {
+          playSound("incorrect");
+          let message = `Sorry ${team.name}, that was not the correct answer. No points awarded.`;
+          if (isDoublePointsActive) {
+            isDoublePointsActive = false;
+            message = `The double points opportunity was missed. ${message}`;
+          }
+          showModal("Incorrect Answer", message, okayButtonHTML, false);
+        }
+      }
+
+      function applyPowerUp(powerUp) {
+        const winningTeam = teams.find(
+          (t) => t.id === currentWinningBidderTeamId
+        );
+        if (!winningTeam) return;
+        let targetTeam;
+        const okayButtonHTML = `<button onclick="closeModal(); checkGameEndOrResetPanel();" class="bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-md modal-action-button">Okay</button>`;
+
+        if (powerUp.effect === "bomb" && winningTeam.hasShield) {
+          winningTeam.hasShield = false;
+          showModal(
+            "Shield Activated!",
+            `${winningTeam.name}'s shield protected them from the ${powerUp.name}!`,
+            okayButtonHTML,
+            false
+          );
+          renderScoreboard();
+          return;
+        }
+
+        switch (powerUp.effect) {
+          case "swap_points":
+            promptForTeamSelection(
+              `Swap Points with Team`,
+              teams.filter((t) => t.id !== winningTeam.id),
+              (selectedTargetTeamId) => {
+                targetTeam = teams.find((t) => t.id === selectedTargetTeamId);
+                if (targetTeam) {
+                  const tempScore = winningTeam.score;
+                  winningTeam.score = targetTeam.score;
+                  targetTeam.score = tempScore;
+                  showModal(
+                    "Points Swapped!",
+                    `${winningTeam.name} swapped scores with ${targetTeam.name}!`,
+                    okayButtonHTML,
+                    false
+                  );
+                  renderScoreboard();
+                } else {
+                  checkGameEndOrResetPanel(); // If no target selected or prompt cancelled
+                }
+              }
+            );
+            break;
+          case "steal_points":
+            promptForTeamSelection(
+              `Steal ${powerUp.points} Points From`,
+              teams.filter((t) => t.id !== winningTeam.id),
+              (selectedTargetTeamId) => {
+                targetTeam = teams.find((t) => t.id === selectedTargetTeamId);
+                if (targetTeam) {
+                  if (targetTeam.hasShield) {
+                    targetTeam.hasShield = false;
+                    showModal(
+                      "Shield Activated!",
+                      `${targetTeam.name}'s shield protected them from being stolen from!`,
+                      okayButtonHTML,
+                      false
+                    );
+                  } else {
+                    const stolenAmount = Math.min(
+                      targetTeam.score,
+                      powerUp.points
+                    );
+                    updateScore(
+                      targetTeam.id,
+                      -stolenAmount,
+                      false,
+                      "steal_points_target"
+                    );
+                    updateScore(
+                      winningTeam.id,
+                      stolenAmount,
+                      false,
+                      "steal_points_winner"
+                    );
+                    showModal(
+                      "Points Stolen!",
+                      `${winningTeam.name} stole ${stolenAmount} points from ${targetTeam.name}!`,
+                      okayButtonHTML,
+                      false
+                    );
+                  }
+                  renderScoreboard();
+                } else {
+                  checkGameEndOrResetPanel();
+                }
+              }
+            );
+            break;
+          case "bomb":
+            updateScore(winningTeam.id, powerUp.points, false, "bomb");
+            showModal(
+              "Oh No, a Bomb!",
+              `${winningTeam.name} lost ${Math.abs(
+                powerUp.points
+              )} points! Their score is now ${winningTeam.score}.`,
+              okayButtonHTML,
+              false
+            );
+            break;
+          case "double_points":
+            isDoublePointsActive = true;
+            // The initial modal from revealBoxContent showed the description and has its own "Okay" button.
+            // That "Okay" button will call checkGameEndOrResetPanel.
+            break;
+          case "shield":
+            winningTeam.hasShield = true;
+            renderScoreboard();
+            // Initial modal from revealBoxContent has "Okay".
+            break;
+          case "bonus_points":
+            updateScore(winningTeam.id, powerUp.points, false, "bonus_points");
+            showModal(
+              "Bonus Points!",
+              `${winningTeam.name} gained ${powerUp.points} bonus points!`,
+              okayButtonHTML,
+              false
+            );
+            break;
+        }
+      }
+
+      function promptForTeamSelection(title, targetTeams, callback) {
+        modalTitle.textContent = title;
+        let contentHTML = `<p class="mb-4">Select a team:</p><div class="space-y-2">`;
+        if (targetTeams.length === 0) {
+          contentHTML = `<p class="mb-4 text-yellow-400">No other teams available for this action.</p>`;
+        } else {
+          targetTeams.forEach((team) => {
+            contentHTML += `<button class="target-team-btn w-full bg-sky-500 hover:bg-sky-600 p-3 rounded-md modal-action-button" data-team-id="${team.id}">${team.name} (Score: ${team.score})</button>`;
+          });
+        }
+        contentHTML += `</div>`;
+        modalContent.innerHTML = contentHTML;
+        let actions = `<button id="modal-cancel-selection-btn" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-md modal-action-button">Cancel</button>`;
+        showModal(title, contentHTML, actions, false);
+        document.getElementById("modal-cancel-selection-btn").onclick = () => {
+          closeModal();
+          checkGameEndOrResetPanel();
+        };
+        document.querySelectorAll(".target-team-btn").forEach((btn) => {
+          btn.onclick = () => {
+            callback(parseInt(btn.dataset.teamId));
+          };
+        });
+      }
+
+      function updateScore(
+        teamId,
+        points,
+        isFromQuestion = true,
+        powerUpEffect = null
+      ) {
+        const team = teams.find((t) => t.id === teamId);
+        if (team) {
+          team.score += points;
+          if (team.score < 0 && powerUpEffect !== "bomb") {
+            if (powerUpEffect !== null || isFromQuestion) {
+              team.score = 0;
+            }
+          }
+          renderScoreboard();
+        }
+      }
+
+      function showModal(
+        title,
+        messageContent,
+        actionsHTML = "",
+        isBackdropDismissible = true
+      ) {
+        modalTitle.textContent = title;
+        currentModalIsBackdropDismissible = isBackdropDismissible;
+
+        if (typeof messageContent === "string") {
+          modalContent.innerHTML = messageContent;
+        } else if (messageContent instanceof HTMLElement) {
+          modalContent.innerHTML = "";
+          modalContent.appendChild(messageContent);
+        } else {
+          modalContent.innerHTML = `<p>${messageContent}</p>`;
+        }
+
+        const defaultCloseButton = document.getElementById("modal-close-btn");
+        if (actionsHTML && actionsHTML.trim() !== "") {
+          modalActions.innerHTML = actionsHTML;
+          if (defaultCloseButton) defaultCloseButton.classList.add("hidden");
+        } else {
+          modalActions.innerHTML = "";
+          if (defaultCloseButton) {
+            defaultCloseButton.classList.remove("hidden");
+            defaultCloseButton.onclick = closeModal;
+            if (!isBackdropDismissible) {
+              // If not backdrop dismissible and no custom actions, the default close button IS the action.
+            } else {
+              // If backdrop dismissible and no custom actions, default close is fine.
+            }
+          }
+        }
+        modalContainer.style.display = "flex";
+      }
+
+      document.getElementById("modal-close-btn").onclick = closeModal;
+
+      function closeModal() {
+        modalContainer.style.display = "none";
+        const defaultCloseButton = document.getElementById("modal-close-btn");
+        if (defaultCloseButton) defaultCloseButton.classList.remove("hidden");
+        // Universal call to checkGameEndOrResetPanel after ANY modal closes via explicit button or backdrop (if allowed)
+        // This might be too broad. Let's make it more specific.
+        // checkGameEndOrResetPanel();
+      }
+
+      modalContainer.addEventListener("click", (event) => {
+        if (
+          currentModalIsBackdropDismissible &&
+          event.target === modalContainer
+        ) {
+          closeModal();
+          checkGameEndOrResetPanel(); // If a backdrop-dismissible modal is closed, proceed.
+        }
+      });
+      function checkGameEndOrResetPanel() {
+        if (boxesOpenedCount >= NUM_MYSTERY_BOXES) {
+          endGame();
+        } else {
+          resetTeacherPanel();
+        }
+      }
+      function endGame() {
+        toggleBackgroundMusic(false);
+        playSound("powerUp");
+        teams.sort((a, b) => b.score - a.score);
+        let leaderboardHTML = '<ol class="list-decimal list-inside space-y-3">';
+        teams.slice(0, 3).forEach((team, index) => {
+          leaderboardHTML += `<li class="text-2xl ${
+            index === 0
+              ? "text-yellow-300"
+              : index === 1
+              ? "text-slate-300"
+              : "text-orange-400"
+          }"><span class="font-semibold">${team.name}</span>: ${
+            team.score
+          } pts (Currency: $${team.currency})</li>`;
+        });
+        leaderboardHTML += "</ol>";
+        if (teams.length > 3) {
+          leaderboardHTML +=
+            '<h4 class="text-xl mt-6 mb-2 font-semibold">Other Scores:</h4><ul class="space-y-1 text-slate-400">';
+          teams.slice(3).forEach((team) => {
+            leaderboardHTML += `<li>${team.name}: ${team.score} pts (Currency: $${team.currency})</li>`;
+          });
+          leaderboardHTML += "</ul>";
+        }
+        const actions = `<button id="restart-game-btn" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-md modal-action-button">Play Again</button>`;
+        const leaderboardContentEl = document.createElement("div");
+        leaderboardContentEl.innerHTML = leaderboardHTML;
+        showModal(
+          "Game Over! Final Scores:",
+          leaderboardContentEl,
+          actions,
+          true
+        );
+        /* Leaderboard can be backdrop dismissible */ document
+          .getElementById("restart-game-btn")
+          .addEventListener("click", () => {
+            closeModal();
+            gameScreen.classList.add("hidden");
+            setupScreen.classList.remove("hidden");
+            document.body.classList.remove("flex", "flex-col", "min-h-screen");
+            document.body.classList.add(
+              "items-center",
+              "justify-center",
+              "h-screen",
+              "overflow-hidden"
+            );
+            updateTeamNameInputs();
+          });
+      }
+      // Initialize
+      setupSounds();
+      updateTeamNameInputs();
+    </script>
+  </body>
+</html>
