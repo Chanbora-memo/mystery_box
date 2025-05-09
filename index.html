@@ -307,6 +307,15 @@
       } catch (e) {
         console.error("Error loading incorrect sound:", e);
       }
+
+      // Try to load congratulation sound
+      let congratulationSoundPlayer;
+      try {
+        congratulationSoundPlayer = new Audio("public/assets/music/congratulation.mp3");
+        // If the file doesn't exist, this will still create an Audio object but it won't play
+      } catch (e) {
+        console.error("Error loading congratulation sound:", e);
+      }
       let sfxPlayers = {};
 
       let boxesOpenedCount = 0;
@@ -540,6 +549,7 @@
           startMusicPlayer.pause();
           correctSoundPlayer.pause();
           incorrectSoundPlayer.pause();
+          congratulationSoundPlayer.pause();
         }
       });
       function toggleFullScreen() {
@@ -1164,7 +1174,22 @@
         // Stop start music if it's still playing
         startMusicPlayer.pause();
         startMusicPlayer.currentTime = 0;
-        playSound("powerUp");
+
+        // Play congratulation sound using the Audio player instead of powerUp sound
+        if (!gameSoundsMuted) {
+          if (congratulationSoundPlayer && congratulationSoundPlayer.src) {
+            congratulationSoundPlayer.currentTime = 0;
+            congratulationSoundPlayer.play().catch(e => {
+              console.log("Error playing congratulation sound:", e);
+              // Fallback to Tone.js if Audio API fails
+              playSound("powerUp");
+            });
+          } else {
+            // Fallback to Tone.js if audio file is not available
+            playSound("powerUp");
+          }
+        }
+
         teams.sort((a, b) => b.score - a.score);
         let leaderboardHTML = '<ol class="list-decimal list-inside space-y-3 font-game-elements">';
         teams.slice(0, 3).forEach((team, index) => {
